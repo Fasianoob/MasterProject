@@ -1,38 +1,50 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr 18 12:37:05 2016
+
+@author: albertofasian
+"""
 
 import itertools as it
 import numpy as np
 import graphviz as gv
+import functools as ft
 import random
 
 class node:
     def __init__(self, name):
         self.name = name
-        #are the followings needed?
+        #is the followings needed?
         self.inputs = []
         self.inputs_pos = []
         self.function = []
-
-    def set_info(self, a=[], b=[], c=[]):
-        self.set_inputs(a)
-        self.set_function(b)
-        self.set_inputs_pos(c)
-        
-    #this is not actually used    
-    def set_inputs(self, a=[]):
-        self.inputs = a
-        self.tt = list(it.product([0,1], repeat=len(self.inputs)))
     
     def set_function(self, a=[]):
         self.function = a
-
-    def set_inputs_pos(self, network):
-        for i in self.inputs:
-            self.inputs_pos.append(network.index(i))
             
-    #the following is used in the random ntw generator
-    def set_inputs_pos1(self, a=[]):
+    def set_inputs_pos(self, a=[]):
         self.inputs_pos = a
         self.tt = list(it.product([0,1], repeat=len(self.inputs_pos)))
+
+    def generate_hcf(self, inputs_pos):
+        #create a list filled with "-"
+        #WARNING: nodes with no inputs will have a non empty function
+        hcf = ['-' for x in range(2**len(inputs_pos))]
+        #hierarchical order: create a list and randomize it
+        hierarchy = range(len(inputs_pos))
+        random.shuffle(hierarchy)
+        #sample random canalyzing and output values
+        CanValues = [random.randint(0, 1) for j in range(len(inputs_pos))]
+        OutValues = [random.randint(0, 1) for j in range(len(inputs_pos))]
+        for i in hierarchy:
+            for j in range(len(self.tt)):
+                if (self.tt[j][i]==CanValues[i] and hcf[j]=='-'):
+                    hcf[j] = OutValues[i]
+        #now the last value. should I assign it randomly?
+        for i in range(len(hcf)):
+            if (hcf[i] == '-'):
+                hcf[i] = random.randint(0,1)
+        self.function = hcf
 
     def update1(self, in_values=()):     #parameter is a tuple!!!
         #exploit the correspondence between tt and self.function
@@ -49,10 +61,8 @@ class network:
         Inputs = [node("Input"+str(i+1)) for i in range(n_inputs)]
         Nodes = [node("Node"+str(i+1)) for i in range(self.n_nodes)]
         Outputs = [node("Output"+str(i+1)) for i in range(n_outputs)]
-        
-        #collect them into a network list
+        #and collect them into a network list
         self.NetworkElements = Inputs + Nodes + Outputs
-        
         
         #generate a list of inputs for Nodes and Outputs elements
         for i in range(n_inputs,self.NtwLen):
@@ -78,12 +88,9 @@ class network:
                 if (tmp not in tmp_input_pos):
                     tmp_input_pos.append(tmp)
             #set the inputs_pos attribute
-            self.NetworkElements[i].set_inputs_pos1(tmp_input_pos)
-            #generate a Function list for Nodes and Outputs elements
-            tmp_b_fun = [random.randint(0, 1) for j in range(2**InputNumber)]
-            #WARNING: what happens if there was the possibility of 0 inputs?
-            self.NetworkElements[i].set_function(tmp_b_fun)
-        
+            self.NetworkElements[i].set_inputs_pos(tmp_input_pos)
+            #generate a Function for Nodes and Outputs elements
+            self.NetworkElements[i].generate_hcf(tmp_input_pos)        
         #WARNING(?): I might come up with "dead end" nodes or inputs
         
         self.status_list = list(it.product([0,1], repeat=self.NtwLen))
@@ -96,6 +103,7 @@ class network:
                 print(self.NetworkElements[k].name)
             print(i.function)
 
+    #why don't you run this in __init__???
     def adj_mat(self):
         AdjMat = np.zeros((self.NtwLen,self.NtwLen), dtype=np.bool)
         for i in range(self.NtwLen):
@@ -144,8 +152,39 @@ class network:
         return trajectory[:loop], trajectory[loop:]
 
     #write a function to draw a graph using graphviz
-
-
+    def graph(self, folder_name, file_name):
+        #graph = ft.partial(gv.Graph, format='svg')
+        digraph = ft.partial(gv.Digraph, format='svg')
+        def add_nodes(graph, nodes):
+            for n in nodes:
+                if isinstance(n, tuple):
+                    graph.node(n[0], **n[1])
+                else:
+                    graph.node(n)
+            return graph
+        
+        def add_edges(graph, edges):
+            for e in edges:
+                if isinstance(e[0], tuple):
+                    graph.edge(*e[0], **e[1])
+                else:
+                    graph.edge(*e)
+            return graph
+        
+        #so....I need a list of all the names
+        NameList = [i.name for i in self.NetworkElements]
+        #...and a list of tuples for each edge
+        adj = self.adj_mat()
+        TupleList = []
+        for i in range(self.NtwLen):
+            for j in range(self.NtwLen):
+                if (adj[i,j]):
+                    TupleList.append(tuple([self.NetworkElements[i].name,self.NetworkElements[j].name]))
+        
+        add_edges(
+            add_nodes(digraph(), NameList),
+            TupleList
+        ).render(folder_name + "/" + file_name)
 
 
 
