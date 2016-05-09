@@ -151,10 +151,14 @@ class network:
         #return(trajectory)
         return trajectory[:loop], trajectory[loop:]
 
+###############################################################################
+
     #write a function to draw a graph using graphviz
-    def graph(self, folder_name, file_name):
+
+    def graph(self, names, edges, folder_name, file_name):
         #graph = ft.partial(gv.Graph, format='svg')
         digraph = ft.partial(gv.Digraph, format='svg')
+        
         def add_nodes(graph, nodes):
             for n in nodes:
                 if isinstance(n, tuple):
@@ -171,20 +175,40 @@ class network:
                     graph.edge(*e)
             return graph
         
+        add_edges(
+            add_nodes(digraph(), names),
+            edges
+        ).render(folder_name + "/" + file_name)
+
+
+    def network_graph(self, folder_name, file_name):
         #so....I need a list of all the names
-        NameList = [i.name for i in self.NetworkElements]
+        names = [i.name for i in self.NetworkElements]
         #...and a list of tuples for each edge
         adj = self.adj_mat()
-        TupleList = []
+        edges = []
         for i in range(self.NtwLen):
             for j in range(self.NtwLen):
                 if (adj[i,j]):
-                    TupleList.append(tuple([self.NetworkElements[i].name,self.NetworkElements[j].name]))
+                    edges.append(tuple([self.NetworkElements[i].name,self.NetworkElements[j].name]))
+        self.graph(names, edges, folder_name, file_name)
+
+    def transition_diagram(self, folder_name, file_name):
+        names = [(str(i).strip('()')).replace(',', '') for i in self.status_list]
         
-        add_edges(
-            add_nodes(digraph(), NameList),
-            TupleList
-        ).render(folder_name + "/" + file_name)
+        tp1 = [(str(i).strip('()')).replace(',', '') for i in self.transition_table()]
+        #print(names)    #debug
+        edges = [tuple([names[i],tp1[i]]) for i in range(len(names))]
+        self.graph(names, edges, folder_name, file_name)
+
+###############################################################################
+
+
+
+
+
+
+
 
 
 
