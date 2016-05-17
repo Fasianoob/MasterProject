@@ -26,24 +26,30 @@ class node:
         self.inputs_pos = a
         self.tt = list(it.product([0,1], repeat=len(self.inputs_pos)))
 
-    def generate_hcf(self, inputs_pos):
+    def generate_hcf(self):
         #create a list filled with "-"
-        #WARNING: nodes with no inputs will have a non empty function
-        hcf = ['-' for x in range(2**len(inputs_pos))]
+        #if node has no inputs, do nothing
+        if (not self.inputs_pos):
+            return
+        hcf = ['-' for x in range(2**len(self.inputs_pos))]
         #hierarchical order: create a list and randomize it
-        hierarchy = range(len(inputs_pos))
+        hierarchy = range(len(self.inputs_pos))
         random.shuffle(hierarchy)
         #sample random canalyzing and output values
-        CanValues = [random.randint(0, 1) for j in range(len(inputs_pos))]
-        OutValues = [random.randint(0, 1) for j in range(len(inputs_pos))]
+        CanValues = [random.randint(0, 1) for j in range(len(self.inputs_pos))]
+        OutValues = [random.randint(0, 1) for j in range(len(self.inputs_pos))]
         for i in hierarchy:
             for j in range(len(self.tt)):
                 if (self.tt[j][i]==CanValues[i] and hcf[j]=='-'):
                     hcf[j] = OutValues[i]
-        #now the last value. should I assign it randomly?
+        #now the last value. it has to be the complementary of the last input
         for i in range(len(hcf)):
             if (hcf[i] == '-'):
                 hcf[i] = random.randint(0,1)
+                if (OutValues[hierarchy.index(max(hierarchy))]==0):
+                    hcf[i] = 1
+                else:
+                    hcf[i] = 0
         self.function = hcf
 
     def update1(self, in_values=()):     #parameter is a tuple!!!
@@ -51,11 +57,12 @@ class node:
         return(self.function[self.tt.index(in_values)])
 
 class network:
-    def __init__(self, n_inputs, max_n_nodes, n_outputs, max_inputs):
+    def __init__(self, n_inputs, n_outputs, max_n_nodes, max_inputs):
         self.n_inputs = n_inputs
         self.n_nodes = random.randint(1,max_n_nodes)
         self.n_outputs = n_outputs
         self.NtwLen = n_inputs + self.n_nodes + n_outputs
+        self.max_inputs = max_inputs
         
         #generate a given number of node instances
         Inputs = [node("Input"+str(i+1)) for i in range(n_inputs)]
@@ -63,6 +70,7 @@ class network:
         Outputs = [node("Output"+str(i+1)) for i in range(n_outputs)]
         #and collect them into a network list
         self.NetworkElements = Inputs + Nodes + Outputs
+        self.ElementsNames = [i.name for i in self.NetworkElements]
         
         #generate a list of inputs for Nodes and Outputs elements
         for i in range(n_inputs,self.NtwLen):
@@ -82,6 +90,7 @@ class network:
                 if ("Node" in self.NetworkElements[i].name):
                     tmp = random.randint(0,self.NtwLen - n_outputs - 1)
                 #if Output: pick a random node from Nodes
+                #NOTE: are you sure about this???
                 else:
                     tmp = random.randint(n_inputs,self.NtwLen - n_outputs - 1)
                 #so...if randint is not already in the list...append
@@ -90,7 +99,7 @@ class network:
             #set the inputs_pos attribute
             self.NetworkElements[i].set_inputs_pos(tmp_input_pos)
             #generate a Function for Nodes and Outputs elements
-            self.NetworkElements[i].generate_hcf(tmp_input_pos)        
+            self.NetworkElements[i].generate_hcf()        
         #WARNING(?): I might come up with "dead end" nodes or inputs
         
         self.status_list = list(it.product([0,1], repeat=self.NtwLen))
@@ -147,8 +156,6 @@ class network:
             else:
                 loop = trajectory.index(tmp)
                 break
-        #print(trajectory)
-        #return(trajectory)
         return trajectory[:loop], trajectory[loop:]
 
 ###############################################################################
@@ -203,8 +210,59 @@ class network:
 
 ###############################################################################
 
+#VARIATION OPERATORS
 
+    #method to generate a complete new hcf
+    def new_hcf(self, node):
+        self.NetworkElements[node].generate_hcf()
+    #note: what about just altering canalyzing hierarchy or values?
 
+    #method to rewire an edge
+    def rewire_edge(self, node):
+        tmp_inputs_pos = self.NetworkElements[node].inputs_pos
+        available = self.NtwLen - self.n_outputs - 1
+        #if node has no inputs or there are no other available inputs, do nothing
+        if ((not tmp_inputs_pos) or (len(tmp_inputs_pos) == available)):
+            return
+        #randomly select an input that will be swapped...
+        old = random.randint(0, len(tmp_inputs_pos) - 1)
+        #...randomly select a substitute input
+        while (True):
+            new = random.randint(0,available)
+            if (new not in tmp_inputs_pos): break
+        #and switch the old input with the new one
+        tmp_inputs_pos[old] = new
+    
+    #method to remove an input
+    def remove_input(self, node):
+        tmp_inputs_pos = self.NetworkElements[node].inputs_pos
+        #if there are no inputs, do nothing
+        if (not tmp_inputs_pos):
+            return
+        #randomly pick an input
+        hit = random.randint(0, len(tmp_inputs_pos) - 1)
+        #remove it from the list
+        del(tmp_inputs_pos[hit])
+        self.NetworkElements[node].set_inputs_pos(tmp_inputs_pos)
+        #regenerate the hcf
+        self.NetworkElements[node].generate_hcf()
+
+    #method to add an input
+    def add_input(self, node):
+        tmp_inputs_pos = self.NetworkElements[node].inputs_pos
+        #if the node has the max number of inputs or IS an input, do nothing
+        if (len(tmp_inputs_pos) == self.max_inputs or node < self.n_inputs):
+            return
+        available = self.NtwLen - self.n_outputs - 1
+        while (True):
+            new = random.randint(0,available)
+            if (new not in tmp_inputs_pos): break
+        #add the new input to the inputs_pos list
+        tmp_inputs_pos.append(new)
+        self.NetworkElements[node].set_inputs_pos(tmp_inputs_pos)
+        #and generate a new hcf
+        self.NetworkElements[node].generate_hcf()
+        
 
 
 
