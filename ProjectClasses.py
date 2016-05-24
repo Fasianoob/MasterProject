@@ -32,25 +32,24 @@ class node:
         if (not self.inputs_pos):
             return
         hcf = ['-' for x in range(2**len(self.inputs_pos))]
-        #hierarchical order: create a list and randomize it
-        hierarchy = range(len(self.inputs_pos))
-        random.shuffle(hierarchy)
+        
         #sample random canalyzing and output values
-        CanValues = [random.randint(0, 1) for j in range(len(self.inputs_pos))]
-        OutValues = [random.randint(0, 1) for j in range(len(self.inputs_pos))]
-        for i in hierarchy:
+        self.hierarchy = [[i] for i in range(len(self.inputs_pos))]
+        for i in self.hierarchy:
+            i.append(tuple([random.randint(0, 1) for j in range(2)]))
+        random.shuffle(self.hierarchy)
+        for i in self.hierarchy:
             for j in range(len(self.tt)):
-                if (self.tt[j][i]==CanValues[i] and hcf[j]=='-'):
-                    hcf[j] = OutValues[i]
+                if (self.tt[j][i[0]]==i[1][0] and hcf[j]=='-'):
+                    hcf[j] = i[1][1]
         #now the last value. it has to be the complementary of the last input
-        for i in range(len(hcf)):
-            if (hcf[i] == '-'):
-                hcf[i] = random.randint(0,1)
-                if (OutValues[hierarchy.index(max(hierarchy))]==0):
-                    hcf[i] = 1
-                else:
-                    hcf[i] = 0
+        last = hcf.index('-')
+        if (self.hierarchy[-1][1][1] == 0):
+            hcf[last] = 1
+        else:
+            hcf[last] = 0
         self.function = hcf
+        
 
     def update1(self, in_values=()):     #parameter is a tuple!!!
         #exploit the correspondence between tt and self.function
@@ -215,7 +214,7 @@ class network:
     #method to generate a complete new hcf
     def new_hcf(self, node):
         self.NetworkElements[node].generate_hcf()
-    #note: what about just altering canalyzing hierarchy or values?
+    #NOTE: what about just altering canalyzing hierarchy or values?
 
     #method to rewire an edge
     def rewire_edge(self, node):
