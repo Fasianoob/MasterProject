@@ -182,7 +182,8 @@ class BioNetwork():
         #for all the following inputs in the hyerarchy
         for i in CanInputs:
             #retrieve the ref to the BioNode of the input being currently analyzed
-            Current = self.BioNetworkElements[i[0]]
+            #i[0] map to the position of inputs_pos containing the position I want
+            Current = self.BioNetworkElements[BoolNodeRef.inputs_pos[i[0]]]
             #call a function to build the respective module
             Docking = Options[i[1]](Docking, Current, counter)
         
@@ -199,11 +200,21 @@ class BioNetwork():
             self.expand_node(self.BoolNetworkElements[i], i - self.n_inputs + 1)
     
     #TRIPLETS LIST
+    #add "activate" or "inhibit" to the predicate
+    #add the priority to the predicate
     def triplets_list(self):
         triplets = []
         for i in self.BioNetworkElements:
             for j in i.inputs:
-                tmp = tuple([j.regulator.name, j.predicate, i.name])
+                #tmp = tuple([j.regulator.name, j.predicate, i.name])
+                predicate = j.predicate
+                if (predicate=='binds'):
+                    if (j.regulation==True):
+                        predicate = 'activate'
+                    else:
+                        predicate = 'inhibit'
+                    predicate += ' (' + str(j.priority) + ')'
+                tmp = tuple([j.regulator.name, predicate, i.name])
                 triplets.append(tmp)
                 print tmp   #for testing
         return triplets
