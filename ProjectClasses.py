@@ -59,9 +59,11 @@ class network:
     def __init__(self, n_inputs, n_outputs, max_n_nodes, max_inputs):
         self.n_inputs = n_inputs
         self.n_nodes = random.randint(1,max_n_nodes)
+        self.max_n_nodes = max_n_nodes
         self.n_outputs = n_outputs
         self.NtwLen = n_inputs + self.n_nodes + n_outputs
         self.max_inputs = max_inputs
+        self.fitness = 0
         
         #generate a given number of node instances
         Inputs = [node("Input"+str(i+1)) for i in range(n_inputs)]
@@ -72,6 +74,8 @@ class network:
         self.ElementsNames = [i.name for i in self.NetworkElements]
         
         #generate a list of inputs for Nodes and Outputs elements
+        '''
+        #VERSION A: output cannot receive connections from Input nodes
         for i in range(n_inputs,self.NtwLen):
             #generate a random number from 0 (or 1?) to max_inputs
             #calculate the number of nodes available for connections
@@ -100,6 +104,27 @@ class network:
             #generate a Function for Nodes and Outputs elements
             self.NetworkElements[i].generate_hcf()        
         #WARNING(?): I might come up with "dead end" nodes or inputs
+        '''
+        #VERSION B: output can receive connections from Input nodes
+        for i in range(n_inputs,self.NtwLen):
+            #generate a random number from 0 (or 1?) to max_inputs
+            #calculate the number of nodes available for connections
+            InputNumber = min((random.randint(1,max_inputs)),(n_inputs+self.n_nodes))
+            #at this stage I can easily create the input_pos list
+            tmp_input_pos = []
+            #until all inputs have been assigned
+            while (len(tmp_input_pos) < InputNumber):
+                #randomly pick a node from Inputs or Nodes. Outputs can't be inputs
+                #Outputs should't be allowed to have Inputs elements as inputs??
+                #if Node: pick a random node from Inputs or Nodes
+                tmp = random.randint(0,self.NtwLen - n_outputs - 1)
+                #so...if randint is not already in the list...append
+                if (tmp not in tmp_input_pos):
+                    tmp_input_pos.append(tmp)
+            #set the inputs_pos attribute
+            self.NetworkElements[i].set_inputs_pos(tmp_input_pos)
+            #generate a Function for Nodes and Outputs elements
+            self.NetworkElements[i].generate_hcf() 
         
         self.status_list = list(it.product([0,1], repeat=self.NtwLen))
         
@@ -261,7 +286,80 @@ class network:
         self.NetworkElements[node].set_inputs_pos(tmp_inputs_pos)
         #and generate a new hcf
         self.NetworkElements[node].generate_hcf()
+    
+    #method to add a node
+    def add_node(self):
+        #if the network doesn't have the max number of nodes already
+        if (self.n_nodes < self.max_n_nodes):
+            #create a new node
+            #update n_nodes and NtwLen
+            pass
+        pass
+    
+    #method to remove a node
+    def remove_node(self, node):
+        pass
         
+###############################################################################
+
+#CREATE DETERMINED BOOLEAN NETWORK
+
+class OR(network):
+    def __init__(self):
+        self.n_inputs = 2
+        self.n_nodes = 0
+        self.n_outputs = 1
+        self.NtwLen = 3
+        self.max_inputs = 2
+        
+        self.NetworkElements = [node('Input1'), node('Input2'), node('Output')]
+        self.ElementsNames = [i.name for i in self.NetworkElements]
+        self.status_list = list(it.product([0,1], repeat=self.NtwLen))
+        
+        self.NetworkElements[2].set_inputs_pos([0,1])
+        self.NetworkElements[2].function = [0,1,1,1]
+
+class AND(network):
+    def __init__(self):
+        self.n_inputs = 2
+        self.n_nodes = 0
+        self.n_outputs = 1
+        self.NtwLen = 3
+        self.max_inputs = 2
+        
+        self.NetworkElements = [node('Input1'), node('Input2'), node('Output')]
+        self.ElementsNames = [i.name for i in self.NetworkElements]
+        self.status_list = list(it.product([0,1], repeat=self.NtwLen))
+        
+        self.NetworkElements[2].set_inputs_pos([0,1])
+        self.NetworkElements[2].function = [0,0,0,1]
+
+class LATCH(network):
+    def __init__(self):
+        self.n_inputs = 2
+        self.n_nodes = 2
+        self.n_outputs = 2
+        self.NtwLen = 6
+        self.max_inputs = 2
+        
+        self.NetworkElements = [node('Input1'), node('Input2'), node('Node1'), node('Node2'), node('Output1'),node('Output2')]
+        self.ElementsNames = [i.name for i in self.NetworkElements]
+        self.status_list = list(it.product([0,1], repeat=self.NtwLen))
+        
+        self.NetworkElements[2].set_inputs_pos([0,5])
+        self.NetworkElements[2].function = [1,0,0,0]
+        
+        self.NetworkElements[3].set_inputs_pos([1,4])
+        self.NetworkElements[3].function = [1,0,0,0]
+        
+        self.NetworkElements[4].set_inputs_pos([2])
+        self.NetworkElements[4].function = [0,1]
+        
+        self.NetworkElements[5].set_inputs_pos([3])
+        self.NetworkElements[5].function = [0,1]
+
+
+
 
 
 

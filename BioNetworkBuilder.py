@@ -259,11 +259,11 @@ class BioNetwork():
             edges.append(tmp)
         self.graph(names, edges, folder_name, file_name)
 
-test = pc.network(2,1,4,3)
+test = pc.network(2,1,1,3)
 biotest = BioNetwork(test)
 
 biotest.expand_network()
-biotest.bionetwork_graph('BioNtw_tests','test1')
+biotest.bionetwork_graph('BioNtw_tests','test2')
 test.print_ntw()
 
 
